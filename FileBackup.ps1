@@ -12,6 +12,7 @@ Function Get-FileName($initialDirectory)
 
 	$result = $OpenFileDialog.ShowDialog((New-Object System.Windows.Forms.Form -Property @{TopMost = $true })) | Out-Null
 	if ([string]::IsNullOrEmpty($OpenFileDialog.FileName)) {
+		Write-Host "Invalid File location: '" $OpenFileDialog.FileName "' Exiting now."
 	    exit
 	}
     $OpenFileDialog.FileName
@@ -23,12 +24,11 @@ Function Get-FolderName($initialDirectory)
 	$FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog
 	$FolderBrowser.Description = 'Select the folder to store the Backups'
 	$result = $FolderBrowser.ShowDialog((New-Object System.Windows.Forms.Form -Property @{TopMost = $true })) | Out-Null
-	if ($result -eq [Windows.Forms.DialogResult]::OK){
-	    $FolderBrowser.SelectedPath
-	}
-	else {
+	if ([string]::IsNullOrEmpty($FolderBrowser.SelectedPath)) {
+		Write-Host "Invalid Folder location: '" $FolderBrowser.SelectedPath "' Exiting now."
 	    exit
 	}
+	$FolderBrowser.SelectedPath
 }
 
 # check if the file location provided is a real path
@@ -56,6 +56,9 @@ if ([string]::IsNullOrEmpty($BackupLocation) -Or !(Test-Path $BackupLocation)) {
 if (!(Test-Path $BackupLocation)) {
 	New-Item -ItemType Directory  -Force -Path $BackupLocation
 }
+
+Write-Host "Backups will save to the following Folder location: '$BackupLocation'"
+
 # normalize the end of the backup location to prepare for file paths.
 $BackupLocation = $BackupLocation.TrimEnd("/"," ")
 
@@ -66,8 +69,8 @@ while (1) {
 	Copy-Item $FileLocation "$BackupLocation/$FileName.$(get-date -f MM-dd-yyyy_HH_mm_ss)" -Force
 	Write-Host "Finished"
 	
-	while ((Get-ChildItem "$FilePath/Backups").Count -gt 10) {
-	Get-ChildItem "$FilePath/Backups" | Sort CreationTime | Select -First 1 | Remove-Item
+	while ((Get-ChildItem "$BackupLocation").Count -gt 10) {
+	Get-ChildItem "$BackupLocation" | Sort CreationTime | Select -First 1 | Remove-Item
 	}
 	
 	start-sleep -seconds $IntervalInSeconds
